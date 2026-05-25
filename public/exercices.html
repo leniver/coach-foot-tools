@@ -21,13 +21,18 @@
     }
     .cat-link {
       background: var(--border);
+      border: 0;
       border-radius: 999px;
       color: var(--text);
+      cursor: pointer;
       font-size: 14px;
       font-weight: bold;
+      margin: 0;
+      min-height: 0;
       padding: 8px 14px;
       text-decoration: none;
     }
+    .cat-link.active { background: var(--primary); color: white; }
     .cat-title {
       scroll-margin-top: 70px;
       margin: 22px 0 10px 0;
@@ -55,6 +60,79 @@
       white-space: nowrap;
     }
     .exo-desc { margin: 8px 0 0 0; }
+    .exo-image {
+      display: block;
+      width: 100%;
+      height: auto;
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-control);
+      cursor: zoom-in;
+    }
+    .exo-image.hidden { display: none; }
+    .link-btn {
+      background: none;
+      border: 0;
+      color: var(--primary);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      margin: 8px 0 0 0;
+      min-height: 0;
+      padding: 0;
+      text-align: left;
+    }
+    .lightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.85);
+      cursor: zoom-out;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox img {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 8px;
+    }
+    .players-row {
+      align-items: center;
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .players-row label { font-weight: bold; }
+    .players-row input { width: 90px; }
+    .session-item {
+      align-items: center;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-control);
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      padding: 10px 12px;
+    }
+    .session-item-title { font-weight: bold; }
+    .session-item-actions {
+      display: flex;
+      flex: 0 0 auto;
+      gap: 6px;
+    }
+    .session-item-actions button {
+      font-size: 16px;
+      margin: 0;
+      min-height: 40px;
+      padding: 6px 10px;
+    }
+    .session-total { font-weight: bold; margin: 12px 0 0 0; }
+    .exo-add { width: 100%; margin-top: 10px; }
+    .catalogue-title { margin-top: 24px; }
 
     @media (min-width: 850px) {
       .exo-list { grid-template-columns: 1fr 1fr; }
@@ -63,77 +141,66 @@
 </head>
 <body>
   <main>
+    <a href="index.html" class="page-close" title="Retour à l'accueil" aria-label="Fermer">✕</a>
     <h1>Exercices d'entraînement</h1>
-    <p class="muted">
-      <a href="index.html">← Outils</a> · Exercices classés par catégorie.
-    </p>
+
+    <div class="card">
+      <h2>Ma séance</h2>
+      <div class="players-row">
+        <label for="playerCount">Nombre de joueurs</label>
+        <input type="number" id="playerCount" min="1" inputmode="numeric" oninput="setPlayers(this.value)" />
+      </div>
+      <div id="sessionList"></div>
+      <p class="session-total" id="sessionTotal"></p>
+    </div>
+
+    <h2 class="catalogue-title">Catalogue d'exercices</h2>
     <nav class="cat-nav" id="catNav"></nav>
     <div id="exoSections"></div>
   </main>
 
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <img id="lightboxImg" src="" alt="" />
+  </div>
+
   <script>
     // Pour ajouter un exercice, ajoute une entrée ici.
     // L'ordre des catégories suit leur première apparition.
+    // "duree" et "image" sont optionnels (image : chemin relatif, ex. images/mon-exo.png).
+    // "minutes" sert à l'estimation de temps ; "perPlayer: true" = minutes par joueur.
     const exercices = [
       {
         categorie: 'Échauffement',
-        titre: 'Toro (rondo)',
-        duree: '10 min',
-        description: 'Cercle de joueurs, 1 ou 2 au milieu. Conserver le ballon en une ou deux touches. Celui qui perd le ballon va au centre.'
+        titre: 'La mouche',
+        duree: '5-10 min',
+        minutes: 10,
+        description: 'Cercle de joueurs, 1 ou 2 au milieu. Conserver le ballon en une ou deux touches. Celui qui perd le ballon va au centre.',
+        image: 'images/la-mouche.png'
       },
       {
         categorie: 'Échauffement',
-        titre: 'Course et mobilité',
-        duree: '8 min',
-        description: 'Course légère autour du terrain avec montées de genoux, talons-fesses, pas chassés et accélérations courtes.'
+        titre: 'La machine à laver',
+        duree: '2 x 5 min',
+        minutes: 10,
+        description: 'En cercle, les joueurs se font des passes en suivant le sens du cercle ; le ballon circule sans s’arrêter, comme dans une machine à laver. On peut changer de sens après un moment.',
+        image: 'images/la-machine-a-laver.png'
       },
       {
         categorie: 'Conduite de balle',
-        titre: 'Slalom entre les plots',
-        duree: '12 min',
-        description: 'Ligne de plots espacés de 1,5 m. Conduire le ballon en slalom des deux pieds, puis sprint final jusqu’à la ligne.'
+        titre: 'Slalom 1',
+        duree: '1 min / enfant',
+        minutes: 1,
+        perPlayer: true,
+        description: 'Sprint pour récupérer le ballon, slalom autour des 3 cônes, retour en conduite pour déposer le ballon dans le cerceau, puis sprint final jusqu’à la ligne d’arrivée.',
+        image: 'images/parcours-slalom.png'
       },
       {
         categorie: 'Conduite de balle',
         titre: 'Carré de dribble',
-        duree: '10 min',
-        description: 'Chaque joueur avec un ballon dans un carré. Conduire sans se toucher, changer de direction au signal, utiliser semelle et extérieur du pied.'
-      },
-      {
-        categorie: 'Passes',
-        titre: 'Passes en triangle',
-        duree: '12 min',
-        description: 'Trois joueurs en triangle. Passe et suit son ballon. Travailler la passe intérieure du pied et le contrôle orienté.'
-      },
-      {
-        categorie: 'Passes',
-        titre: 'Passe et va',
-        duree: '10 min',
-        description: 'Deux joueurs face à face. Passe, appel, remise en une touche. Augmenter progressivement la distance et le rythme.'
-      },
-      {
-        categorie: 'Tir / Finition',
-        titre: 'Tir après conduite',
-        duree: '15 min',
-        description: 'Conduire vers la surface, fixer un plot puis frapper au but. Alterner pied droit et pied gauche, viser les coins.'
-      },
-      {
-        categorie: 'Tir / Finition',
-        titre: 'Une-deux et frappe',
-        duree: '12 min',
-        description: 'Passe à un appui, remise, puis frappe de première intention. Insister sur la précision avant la puissance.'
-      },
-      {
-        categorie: 'Jeu',
-        titre: 'Match à effectif réduit',
-        duree: '15 min',
-        description: 'Jeu 4 contre 4 sur petit terrain avec petits buts. Encourager le jeu en mouvement et les passes rapides.'
-      },
-      {
-        categorie: 'Jeu',
-        titre: 'Conservation 5 contre 2',
-        duree: '12 min',
-        description: 'Cinq joueurs conservent le ballon contre deux défenseurs dans une zone. Compter les passes consécutives, changer les défenseurs.'
+        duree: '5 min',
+        minutes: 5,
+        description: 'Chaque joueur a un ballon dans un carré délimité. Conduire librement sans sortir ni se toucher, en variant les surfaces : semelle, intérieur et extérieur du pied.',
+        image: 'images/carre-de-dribble.png'
       }
     ];
 
@@ -141,13 +208,6 @@
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
-    }
-
-    function slug(text) {
-      return 'cat-' + text.toLowerCase()
-        .normalize('NFD').replace(/[̀-ͯ]/g, '')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
     }
 
     // Regroupe les exercices par catégorie en gardant l'ordre d'apparition.
@@ -161,26 +221,185 @@
       byCategory.get(exo.categorie).push(exo);
     });
 
-    document.getElementById('catNav').innerHTML = categories.map(cat =>
-      `<a class="cat-link" href="#${slug(cat)}">${escapeHtml(cat)}</a>`
-    ).join('');
+    const filters = ['all', ...categories];
+    let selectedCategory = 'all';
 
-    document.getElementById('exoSections').innerHTML = categories.map(cat => `
-      <section>
-        <h2 class="cat-title" id="${slug(cat)}">${escapeHtml(cat)}</h2>
-        <div class="exo-list">
-          ${byCategory.get(cat).map(exo => `
-            <div class="card">
-              <div class="exo-head">
-                <span class="exo-title">${escapeHtml(exo.titre)}</span>
-                <span class="duree">${escapeHtml(exo.duree)}</span>
-              </div>
-              <p class="exo-desc">${escapeHtml(exo.description)}</p>
+    const SESSION_KEY = 'exercicesSession';
+    let session = [];   // titres des exercices, dans l'ordre de la séance
+    let players = 12;
+
+    function renderNav() {
+      document.getElementById('catNav').innerHTML = filters.map((cat, index) => {
+        const label = cat === 'all' ? 'Toutes' : cat;
+        const active = cat === selectedCategory ? ' active' : '';
+        return `<button class="cat-link${active}" onclick="selectCategory(${index})">${escapeHtml(label)}</button>`;
+      }).join('');
+    }
+
+    function renderSections() {
+      const shown = selectedCategory === 'all'
+        ? categories
+        : categories.filter(cat => cat === selectedCategory);
+      document.getElementById('exoSections').innerHTML = shown.map(cat => `
+        <section>
+          <h2 class="cat-title">${escapeHtml(cat)}</h2>
+          <div class="exo-list">
+            ${byCategory.get(cat).map(exo => {
+              const inSession = session.includes(exo.titre);
+              const gi = exercices.indexOf(exo);
+              return `
+              <div class="card">
+                <div class="exo-head">
+                  <span class="exo-title">${escapeHtml(exo.titre)}</span>
+                  ${exo.duree ? `<span class="duree">${escapeHtml(exo.duree)}</span>` : ''}
+                </div>
+                <p class="exo-desc">${escapeHtml(exo.description)}</p>
+                ${exo.image ? `
+                  <button class="link-btn" onclick="toggleImage(this)">Voir plus</button>
+                  <img class="exo-image hidden" src="${encodeURI(exo.image)}" alt="${escapeHtml(exo.titre)}" loading="lazy" onclick="openLightbox(this.src, this.alt)" />
+                ` : ''}
+                <button class="exo-add ${inSession ? 'secondary' : 'success'}" onclick="toggleSession(${gi})">${inSession ? 'Retirer de la séance' : 'Ajouter à la séance'}</button>
+              </div>`;
+            }).join('')}
+          </div>
+        </section>
+      `).join('');
+    }
+
+    function selectCategory(index) {
+      selectedCategory = filters[index];
+      renderNav();
+      renderSections();
+    }
+
+    function toggleImage(button) {
+      const img = button.nextElementSibling;
+      if (!img) return;
+      const hidden = img.classList.toggle('hidden');
+      button.textContent = hidden ? 'Voir plus' : 'Voir moins';
+    }
+
+    function openLightbox(src, alt) {
+      const box = document.getElementById('lightbox');
+      const img = document.getElementById('lightboxImg');
+      img.src = src;
+      img.alt = alt || '';
+      box.classList.add('open');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+      document.getElementById('lightboxImg').src = '';
+    }
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') closeLightbox();
+    });
+
+    // --- Séance (sélection d'exercices, ordre, estimation de temps) ---
+    function findExo(titre) {
+      return exercices.find(exo => exo.titre === titre);
+    }
+
+    function exoMinutes(exo) {
+      const base = Number(exo.minutes) || 0;
+      return exo.perPlayer ? base * players : base;
+    }
+
+    function formatMinutes(total) {
+      total = Math.round(total);
+      if (total < 60) return `${total} min`;
+      const hours = Math.floor(total / 60);
+      const mins = total % 60;
+      return mins ? `${hours} h ${String(mins).padStart(2, '0')}` : `${hours} h`;
+    }
+
+    function toggleSession(index) {
+      const exo = exercices[index];
+      if (!exo) return;
+      const pos = session.indexOf(exo.titre);
+      if (pos === -1) session.push(exo.titre);
+      else session.splice(pos, 1);
+      persistSession();
+      renderSections();
+      renderSession();
+    }
+
+    function moveSession(pos, direction) {
+      const target = pos + direction;
+      if (target < 0 || target >= session.length) return;
+      [session[pos], session[target]] = [session[target], session[pos]];
+      persistSession();
+      renderSession();
+    }
+
+    function removeFromSession(pos) {
+      session.splice(pos, 1);
+      persistSession();
+      renderSections();
+      renderSession();
+    }
+
+    function setPlayers(value) {
+      const n = parseInt(value, 10);
+      players = Number.isFinite(n) && n > 0 ? n : 0;
+      persistSession();
+      renderSession();
+    }
+
+    function renderSession() {
+      const list = document.getElementById('sessionList');
+      const totalEl = document.getElementById('sessionTotal');
+      if (!session.length) {
+        list.innerHTML = '<p class="muted">Aucun exercice sélectionné. Ajoute des exercices depuis le catalogue.</p>';
+        totalEl.textContent = '';
+        return;
+      }
+      list.innerHTML = session.map((titre, pos) => {
+        const exo = findExo(titre);
+        if (!exo) return '';
+        const detail = exo.perPlayer ? ` (${exo.minutes} min × ${players} joueurs)` : '';
+        return `
+          <div class="session-item">
+            <div>
+              <div class="session-item-title">${pos + 1}. ${escapeHtml(exo.titre)}</div>
+              <div class="muted">${formatMinutes(exoMinutes(exo))}${detail}</div>
             </div>
-          `).join('')}
-        </div>
-      </section>
-    `).join('');
+            <div class="session-item-actions">
+              <button onclick="moveSession(${pos}, -1)" ${pos === 0 ? 'disabled' : ''} aria-label="Monter">↑</button>
+              <button onclick="moveSession(${pos}, 1)" ${pos === session.length - 1 ? 'disabled' : ''} aria-label="Descendre">↓</button>
+              <button class="danger" onclick="removeFromSession(${pos})" aria-label="Retirer">✕</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      const total = session.reduce((sum, titre) => {
+        const exo = findExo(titre);
+        return sum + (exo ? exoMinutes(exo) : 0);
+      }, 0);
+      totalEl.textContent = `Temps total estimé : ${formatMinutes(total)}`;
+    }
+
+    function persistSession() {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ players, session }));
+    }
+
+    function restoreSession() {
+      try {
+        const data = JSON.parse(localStorage.getItem(SESSION_KEY));
+        if (!data) return;
+        if (Number(data.players) > 0) players = Number(data.players);
+        if (Array.isArray(data.session)) session = data.session.filter(titre => findExo(titre));
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    restoreSession();
+    document.getElementById('playerCount').value = players;
+    renderNav();
+    renderSections();
+    renderSession();
   </script>
 </body>
 </html>
