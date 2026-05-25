@@ -93,6 +93,30 @@
     }
     .group-a { border-top: 6px solid var(--primary); }
     .group-b { border-top: 6px solid var(--success); }
+    .saved-lists {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .saved-list-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-control);
+      padding: 12px;
+      background: var(--surface-soft);
+    }
+    .saved-list-name { font-weight: bold; font-size: 17px; }
+    .saved-list-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .saved-list-actions button {
+      margin: 0;
+      min-height: 42px;
+      padding: 8px 14px;
+      font-size: 14px;
+      flex: 1 1 auto;
+    }
 
     @media (min-width: 850px) {
       .grid, .groups { grid-template-columns: 1fr 1fr; }
@@ -118,13 +142,22 @@
 
     <section class="tab-panel active" id="tabChildren">
       <div class="card">
-        <h2>Liste des enfants</h2>
-        <p class="muted">Un prénom par ligne. Pour une liste fixe, change le tableau <strong>defaultChildren</strong> dans le script.</p>
-        <textarea id="childrenInput"></textarea>
+        <h2>Listes d'enfants</h2>
+        <p class="muted">Crée et gère tes listes. Charge une liste pour la chronométrer.</p>
         <div class="actions">
-          <button class="full" onclick="startSession()">Charger les enfants</button>
-          <button class="secondary full" onclick="loadDefaultChildren()">Recharger la liste prévue</button>
-          <button class="danger full" onclick="resetAll()">Tout effacer</button>
+          <button class="full" onclick="openListEditor()">Créer une nouvelle liste</button>
+        </div>
+        <div class="saved-lists" id="savedLists"></div>
+      </div>
+
+      <div class="card hidden" id="listEditor">
+        <h2 id="listEditorTitle">Nouvelle liste</h2>
+        <p class="muted">Un prénom par ligne.</p>
+        <input id="listNameInput" type="text" placeholder="Nom de la liste (ex. U10 mardi)" />
+        <textarea id="childrenInput" placeholder="Un prénom par ligne"></textarea>
+        <div class="actions">
+          <button class="success full" onclick="saveListEditor()">Enregistrer</button>
+          <button class="secondary full" onclick="closeListEditor()">Annuler</button>
         </div>
       </div>
     </section>
@@ -133,7 +166,7 @@
       <div class="grid">
         <div class="card">
           <h2>Choisir les enfants</h2>
-          <p class="muted">Tape sur tous les enfants à chronométrer. Ils apparaissent automatiquement dans la zone de chrono.</p>
+          <p class="muted">Tape sur tous les enfants à chronométrer.</p>
           <div id="selectionSummary" class="selection-summary">Aucun enfant sélectionné</div>
           <div class="selector-list" id="childrenSelector"></div>
           <div class="actions">
@@ -233,21 +266,7 @@
       return value.charAt(0).toUpperCase() + value.slice(1);
     }
 
-    function loadDefaultChildren() {
-      document.getElementById('childrenInput').value = defaultChildren.join('\n');
-    }
-
-    function startSession() {
-      const names = document.getElementById('childrenInput').value
-        .split('\n')
-        .map(name => name.trim())
-        .filter(Boolean);
-
-      if (names.length < 2) {
-        alert('Ajoute au moins deux enfants.');
-        return;
-      }
-
+    function applyChildren(names) {
       const oldTimes = new Map(children.map(child => [child.name, child.time]));
       children = names.map(name => ({ name, time: oldTimes.has(name) ? oldTimes.get(name) : null }));
       selectedChildIndexes = [];
@@ -259,7 +278,6 @@
 
       renderAll();
       saveState();
-      showTab('chrono');
     }
 
     function renderAll() {
@@ -267,6 +285,7 @@
       renderChronoChildren();
       renderResults();
       renderHistory();
+      renderSavedLists();
     }
 
     function renderChildrenSelector() {
@@ -574,38 +593,142 @@
       return div.innerHTML;
     }
 
-    function resetAll() {
-      if (!confirm('Tout effacer ?')) return;
-      localStorage.removeItem('chronoChildrenState');
-      location.reload();
-    }
-
     function saveState() {
       localStorage.setItem('chronoChildrenState', JSON.stringify({ children, selectedChildIndexes }));
     }
 
     function restoreState() {
+      seedDefaultListIfEmpty();
       const raw = localStorage.getItem('chronoChildrenState');
-      if (!raw) {
-        loadDefaultChildren();
-        renderAll();
+      if (raw) {
+        try {
+          const state = JSON.parse(raw);
+          children = state.children || [];
+          selectedChildIndexes = state.selectedChildIndexes || [];
+        } catch (e) {
+          localStorage.removeItem('chronoChildrenState');
+        }
+      }
+      renderAll();
+    }
+
+    const SAVED_LISTS_KEY = 'chronoSavedLists';
+    let savedListNames = [];
+
+    function loadSavedLists() {
+      try {
+        return JSON.parse(localStorage.getItem(SAVED_LISTS_KEY)) || {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function persistSavedLists(lists) {
+      localStorage.setItem(SAVED_LISTS_KEY, JSON.stringify(lists));
+    }
+
+    let editingListName = null;
+
+    function openListEditor() {
+      editingListName = null;
+      document.getElementById('listEditorTitle').textContent = 'Nouvelle liste';
+      document.getElementById('listNameInput').value = '';
+      document.getElementById('childrenInput').value = '';
+      document.getElementById('listEditor').classList.remove('hidden');
+      document.getElementById('listNameInput').focus();
+    }
+
+    function editNamedList(index) {
+      const name = savedListNames[index];
+      const lists = loadSavedLists();
+      if (!name || !lists[name]) return;
+      editingListName = name;
+      document.getElementById('listEditorTitle').textContent = 'Modifier la liste';
+      document.getElementById('listNameInput').value = name;
+      document.getElementById('childrenInput').value = lists[name].join('\n');
+      document.getElementById('listEditor').classList.remove('hidden');
+      document.getElementById('listNameInput').focus();
+    }
+
+    function closeListEditor() {
+      editingListName = null;
+      document.getElementById('listEditor').classList.add('hidden');
+      document.getElementById('listNameInput').value = '';
+      document.getElementById('childrenInput').value = '';
+    }
+
+    function saveListEditor() {
+      const name = document.getElementById('listNameInput').value.trim();
+      if (!name) {
+        alert('Donne un nom à la liste.');
         return;
       }
-      try {
-        const state = JSON.parse(raw);
-        children = state.children || [];
-        selectedChildIndexes = state.selectedChildIndexes || [];
-        if (children.length) {
-          document.getElementById('childrenInput').value = children.map(c => c.name).join('\n');
-        } else {
-          loadDefaultChildren();
-        }
-        renderAll();
-      } catch (e) {
-        localStorage.removeItem('chronoChildrenState');
-        loadDefaultChildren();
-        renderAll();
+      const names = document.getElementById('childrenInput').value
+        .split('\n')
+        .map(item => item.trim())
+        .filter(Boolean);
+      if (names.length < 2) {
+        alert('Ajoute au moins deux enfants.');
+        return;
       }
+      const lists = loadSavedLists();
+      if (lists[name] && name !== editingListName && !confirm(`La liste « ${name} » existe déjà. La remplacer ?`)) {
+        return;
+      }
+      if (editingListName && editingListName !== name) {
+        delete lists[editingListName];
+      }
+      lists[name] = names;
+      persistSavedLists(lists);
+      closeListEditor();
+      renderSavedLists();
+    }
+
+    function renderSavedLists() {
+      const container = document.getElementById('savedLists');
+      if (!container) return;
+      const lists = loadSavedLists();
+      savedListNames = Object.keys(lists).sort((a, b) => a.localeCompare(b));
+      if (!savedListNames.length) {
+        container.innerHTML = '<p class="muted">Aucune liste. Crée ta première liste.</p>';
+        return;
+      }
+      container.innerHTML = savedListNames.map((name, index) => `
+        <div class="saved-list-row">
+          <div>
+            <div class="saved-list-name">${escapeHtml(name)}</div>
+            <div class="muted">${lists[name].length} enfant(s) : ${lists[name].map(escapeHtml).join(', ')}</div>
+          </div>
+          <div class="saved-list-actions">
+            <button class="success" onclick="useNamedList(${index})">Charger</button>
+            <button class="secondary" onclick="editNamedList(${index})">Modifier</button>
+            <button class="danger" onclick="deleteNamedList(${index})">Supprimer</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function useNamedList(index) {
+      const name = savedListNames[index];
+      const lists = loadSavedLists();
+      if (!name || !lists[name]) return;
+      applyChildren(lists[name]);
+      showTab('chrono');
+    }
+
+    function deleteNamedList(index) {
+      const name = savedListNames[index];
+      if (!name) return;
+      if (!confirm(`Supprimer la liste « ${name} » ?`)) return;
+      const lists = loadSavedLists();
+      delete lists[name];
+      persistSavedLists(lists);
+      renderSavedLists();
+    }
+
+    function seedDefaultListIfEmpty() {
+      if (localStorage.getItem(SAVED_LISTS_KEY) !== null) return;
+      persistSavedLists({ 'Liste par défaut': defaultChildren.slice() });
     }
 
     restoreState();
