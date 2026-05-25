@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Outils entraînement</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Styles spécifiques au sélecteur d'outils */
+    .tool-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .tool-card {
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+      color: inherit;
+      display: flex;
+      gap: 14px;
+      min-height: 84px;
+      padding: 16px;
+      text-decoration: none;
+    }
+    .tool-card:active { background: var(--surface-soft); }
+    .tool-icon {
+      align-items: center;
+      background: var(--primary-soft);
+      border-radius: var(--radius-card);
+      display: flex;
+      flex: 0 0 auto;
+      font-size: 30px;
+      height: 56px;
+      justify-content: center;
+      width: 56px;
+    }
+    .tool-body { flex: 1; min-width: 0; }
+    .tool-title { font-size: 19px; font-weight: bold; margin: 0 0 4px 0; }
+    .tool-arrow { flex: 0 0 auto; font-size: 26px; color: var(--muted); }
+
+    @media (min-width: 850px) {
+      .tool-list { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Outils entraînement</h1>
+    <p class="muted">Choisis un outil.</p>
+    <div class="tool-list" id="toolList"></div>
+  </main>
+
+  <script>
+    // Pour ajouter un outil, ajoute une entrée ici.
+    const tools = [
+      {
+        title: 'Exercices d\'entraînement',
+        description: 'Exercices classés par catégorie : échauffement, passes, tir, jeu…',
+        icon: '⚽',
+        href: 'exercices.html'
+      },
+      {
+        title: 'Chronométrage enfants',
+        description: 'Chronométrer les enfants et créer 2 groupes équilibrés.',
+        icon: '⏱️',
+        href: 'chrono.html'
+      }
+    ];
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    document.getElementById('toolList').innerHTML = tools.map(tool => `
+      <a class="tool-card" href="${encodeURI(tool.href)}">
+        <span class="tool-icon">${escapeHtml(tool.icon)}</span>
+        <span class="tool-body">
+          <span class="tool-title">${escapeHtml(tool.title)}</span>
+          <span class="muted">${escapeHtml(tool.description)}</span>
+        </span>
+        <span class="tool-arrow">›</span>
+      </a>
+    `).join('');
+  </script>
+</body>
+</html>

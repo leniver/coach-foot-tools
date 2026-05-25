@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Chronométrage enfants</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Styles spécifiques au chronométrage */
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--surface);
+      padding: 8px 0 12px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    .tab-button {
+      background: var(--border);
+      color: var(--text);
+      font-size: 14px;
+      padding: 10px 6px;
+      min-height: 48px;
+      margin: 0;
+    }
+    .tab-button.active { background: var(--primary); color: white; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .grid, .groups {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .chrono-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .selector-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .select-child {
+      width: 100%;
+      text-align: left;
+      background: var(--surface-soft);
+      color: var(--text);
+      border: 2px solid var(--border);
+      min-height: 58px;
+    }
+    .select-child.selected { background: var(--primary-soft); border-color: var(--primary); }
+    .select-child.done { background: #f0fdf4; border-color: var(--success); color: #166534; }
+    .select-child:disabled { opacity: 0.7; }
+    .selection-summary {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: var(--radius-control);
+      padding: 10px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .child-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      padding: 14px;
+      background: var(--surface-soft);
+    }
+    .child-row.finished { border-color: var(--success); background: #f0fdf4; }
+    .child-name {
+      font-size: 22px;
+      font-weight: bold;
+      line-height: 1.2;
+    }
+    .child-timer {
+      font-size: 36px;
+      font-weight: bold;
+      font-variant-numeric: tabular-nums;
+    }
+    .stop-button {
+      width: 100%;
+      font-size: 18px;
+      min-height: 62px;
+    }
+    .group-a { border-top: 6px solid var(--primary); }
+    .group-b { border-top: 6px solid var(--success); }
+
+    @media (min-width: 850px) {
+      .grid, .groups { grid-template-columns: 1fr 1fr; }
+      .selector-list { grid-template-columns: 1fr 1fr; }
+      .child-row {
+        grid-template-columns: 1.2fr 1fr 140px;
+        align-items: center;
+      }
+      .tab-button { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Chronométrage enfants</h1>
+    <p class="muted">Sélectionne les enfants à chronométrer, lance les chronos, puis arrête chaque enfant séparément.</p>
+
+    <nav class="tabs">
+      <button class="tab-button active" id="tabChildrenBtn" onclick="showTab('children')">Enfants</button>
+      <button class="tab-button" id="tabChronoBtn" onclick="showTab('chrono')">Chrono</button>
+      <button class="tab-button" id="tabResultsBtn" onclick="showTab('results')">Résultats</button>
+    </nav>
+
+    <section class="tab-panel active" id="tabChildren">
+      <div class="card">
+        <h2>Liste des enfants</h2>
+        <p class="muted">Un prénom par ligne. Pour une liste fixe, change le tableau <strong>defaultChildren</strong> dans le script.</p>
+        <textarea id="childrenInput"></textarea>
+        <div class="actions">
+          <button class="full" onclick="startSession()">Charger les enfants</button>
+          <button class="secondary full" onclick="loadDefaultChildren()">Recharger la liste prévue</button>
+          <button class="danger full" onclick="resetAll()">Tout effacer</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tabChrono">
+      <div class="grid">
+        <div class="card">
+          <h2>Choisir les enfants</h2>
+          <p class="muted">Tape sur tous les enfants à chronométrer. Ils apparaissent automatiquement dans la zone de chrono.</p>
+          <div id="selectionSummary" class="selection-summary">Aucun enfant sélectionné</div>
+          <div class="selector-list" id="childrenSelector"></div>
+          <div class="actions">
+            <button class="secondary full" onclick="clearSelection()">Annuler la sélection</button>
+            <button class="danger full" onclick="resetCurrentChronos()">Réinitialiser les chronos en cours</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Chronométrage</h2>
+          <p id="duoInfo" class="muted">Charge d’abord la liste des enfants.</p>
+          <div class="chrono-list" id="currentDuo"></div>
+          <div class="actions">
+            <button class="success full" id="startBtn" onclick="startSelectedTimers()" disabled>Démarrer les chronos</button>
+            <button class="danger full" onclick="resetCurrentChronos()">Réinitialiser les chronos en cours</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tabResults">
+      <div class="card">
+        <h2>Résultats</h2>
+        <p class="muted">Les enfants chronométrés sont triés du plus rapide au plus lent.</p>
+        <table>
+          <thead>
+            <tr><th>Enfant</th><th>Temps</th></tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+        <div class="actions">
+          <button class="full" onclick="createBalancedGroups()">Créer 2 groupes équilibrés</button>
+          <button class="danger full" onclick="resetAllSavedChronos()">Réinitialiser tous les chronos sauvegardés</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Historique des chronos</h2>
+        <table>
+          <thead>
+            <tr><th>Enfant</th><th>Temps</th><th>Action</th></tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+
+      <section class="hidden" id="groupsSection">
+        <h2>Groupes équilibrés</h2>
+        <div class="groups">
+          <div class="card group-a">
+            <h3>Groupe A</h3>
+            <p id="groupASummary" class="muted"></p>
+            <table><tbody id="groupA"></tbody></table>
+          </div>
+          <div class="card group-b">
+            <h3>Groupe B</h3>
+            <p id="groupBSummary" class="muted"></p>
+            <table><tbody id="groupB"></tbody></table>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="secondary full" onclick="createBalancedGroups()">Recalculer les groupes</button>
+          <button class="full" onclick="exportCsv()">Exporter CSV</button>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const defaultChildren = [
+      'Emma',
+      'Lucas',
+      'Léa',
+      'Noah',
+      'Mia',
+      'Gabriel',
+      'Zoé',
+      'Louis'
+    ];
+
+    let children = [];
+    let selectedChildIndexes = [];
+    let timerInterval = null;
+    let startTime = 0;
+    let chronoRunning = false;
+    let activeChildrenState = [];
+
+    function showTab(tabName) {
+      ['children', 'chrono', 'results'].forEach(name => {
+        document.getElementById(`tab${capitalize(name)}`).classList.toggle('active', name === tabName);
+        document.getElementById(`tab${capitalize(name)}Btn`).classList.toggle('active', name === tabName);
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function capitalize(value) {
+      return value.charAt(0).toUpperCase() + value.slice(1);
+    }
+
+    function loadDefaultChildren() {
+      document.getElementById('childrenInput').value = defaultChildren.join('\n');
+    }
+
+    function startSession() {
+      const names = document.getElementById('childrenInput').value
+        .split('\n')
+        .map(name => name.trim())
+        .filter(Boolean);
+
+      if (names.length < 2) {
+        alert('Ajoute au moins deux enfants.');
+        return;
+      }
+
+      const oldTimes = new Map(children.map(child => [child.name, child.time]));
+      children = names.map(name => ({ name, time: oldTimes.has(name) ? oldTimes.get(name) : null }));
+      selectedChildIndexes = [];
+      resetRunningTimersOnly();
+
+      document.getElementById('groupsSection').classList.add('hidden');
+      document.getElementById('duoInfo').textContent = 'Sélectionne les enfants à chronométrer.';
+      document.getElementById('startBtn').disabled = true;
+
+      renderAll();
+      saveState();
+      showTab('chrono');
+    }
+
+    function renderAll() {
+      renderChildrenSelector();
+      renderChronoChildren();
+      renderResults();
+      renderHistory();
+    }
+
+    function renderChildrenSelector() {
+      const container = document.getElementById('childrenSelector');
+      if (!children.length) {
+        container.innerHTML = '<p class="muted">Aucun enfant chargé.</p>';
+        updateSelectionSummary();
+        return;
+      }
+
+      container.innerHTML = children.map((child, index) => {
+        const isSelected = selectedChildIndexes.includes(index);
+        const isDone = child.time !== null;
+        const status = isDone ? ` - ${formatTime(child.time)}` : '';
+        return `
+          <button
+            class="select-child ${isSelected ? 'selected' : ''} ${isDone ? 'done' : ''}"
+            onclick="toggleChildSelection(${index})"
+            ${isDone || chronoRunning ? 'disabled' : ''}
+          >
+            ${escapeHtml(child.name)}${status}
+          </button>
+        `;
+      }).join('');
+      updateSelectionSummary();
+    }
+
+    function toggleChildSelection(index) {
+      if (children[index].time !== null || chronoRunning) return;
+
+      if (selectedChildIndexes.includes(index)) {
+        selectedChildIndexes = selectedChildIndexes.filter(item => item !== index);
+      } else {
+        selectedChildIndexes.push(index);
+      }
+
+      renderChildrenSelector();
+      renderChronoChildren();
+      saveState();
+    }
+
+    function updateSelectionSummary() {
+      const summary = document.getElementById('selectionSummary');
+      const names = selectedChildIndexes.map(index => children[index]?.name).filter(Boolean);
+      summary.textContent = names.length ? `Sélection: ${names.join(' + ')}` : 'Aucun enfant sélectionné';
+      document.getElementById('startBtn').disabled = names.length === 0 || chronoRunning;
+    }
+
+    function clearSelection() {
+      if (chronoRunning) return;
+      selectedChildIndexes = [];
+      activeChildrenState = [];
+      renderChildrenSelector();
+      renderChronoChildren();
+      saveState();
+    }
+
+    function renderChronoChildren() {
+      const container = document.getElementById('currentDuo');
+      activeChildrenState = selectedChildIndexes.map(childIndex => {
+        const existing = activeChildrenState.find(item => item.childIndex === childIndex);
+        return existing || {
+          childIndex,
+          running: false,
+          stopped: false,
+          elapsed: 0
+        };
+      });
+
+      if (!children.length) {
+        container.innerHTML = '';
+        document.getElementById('duoInfo').textContent = 'Charge d’abord la liste des enfants.';
+        document.getElementById('startBtn').disabled = true;
+        return;
+      }
+
+      if (!selectedChildIndexes.length) {
+        container.innerHTML = '';
+        document.getElementById('duoInfo').textContent = 'Sélectionne les enfants à chronométrer.';
+        document.getElementById('startBtn').disabled = true;
+        return;
+      }
+
+      document.getElementById('duoInfo').textContent = `${selectedChildIndexes.length} enfant(s) sélectionné(s)`;
+      container.innerHTML = activeChildrenState.map(item => {
+        const child = children[item.childIndex];
+        return `
+          <div class="child-row ${item.stopped ? 'finished' : ''}" id="childBox${item.childIndex}">
+            <div class="child-name">${escapeHtml(child.name)}</div>
+            <div class="child-timer" id="timerChild${item.childIndex}">${formatTime(item.elapsed)}</div>
+            <button class="warning stop-button" id="stopChild${item.childIndex}" onclick="stopChildTimer(${item.childIndex})" ${item.running && !item.stopped ? '' : 'disabled'}>Arrêter</button>
+          </div>
+        `;
+      }).join('');
+      document.getElementById('startBtn').disabled = chronoRunning || selectedChildIndexes.length === 0;
+    }
+
+    function startSelectedTimers() {
+      if (!selectedChildIndexes.length || chronoRunning) return;
+
+      startTime = Date.now();
+      chronoRunning = true;
+      activeChildrenState.forEach(item => {
+        item.running = true;
+        item.stopped = false;
+        item.elapsed = 0;
+      });
+
+      document.getElementById('startBtn').disabled = true;
+      renderChildrenSelector();
+      renderChronoChildren();
+      timerInterval = setInterval(updateActiveTimers, 20);
+      saveState();
+    }
+
+    function updateActiveTimers() {
+      const now = Date.now();
+      activeChildrenState.forEach(item => {
+        if (item.running && !item.stopped) {
+          item.elapsed = now - startTime;
+          const display = document.getElementById(`timerChild${item.childIndex}`);
+          if (display) display.textContent = formatTime(item.elapsed);
+        }
+      });
+    }
+
+    function stopChildTimer(childIndex) {
+      const item = activeChildrenState.find(entry => entry.childIndex === childIndex);
+      if (!item || !item.running || item.stopped) return;
+
+      item.elapsed = Date.now() - startTime;
+      item.stopped = true;
+      item.running = false;
+      children[childIndex].time = item.elapsed;
+
+      const display = document.getElementById(`timerChild${childIndex}`);
+      const stopButton = document.getElementById(`stopChild${childIndex}`);
+      const box = document.getElementById(`childBox${childIndex}`);
+      if (display) display.textContent = formatTime(item.elapsed);
+      if (stopButton) stopButton.disabled = true;
+      if (box) box.classList.add('finished');
+
+      renderResults();
+      renderHistory();
+      saveState();
+
+      if (activeChildrenState.every(entry => entry.stopped)) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        chronoRunning = false;
+        selectedChildIndexes = [];
+        activeChildrenState = [];
+        document.getElementById('currentDuo').innerHTML = '';
+        document.getElementById('duoInfo').textContent = 'Chronométrage terminé. Sélectionne les prochains enfants.';
+        document.getElementById('startBtn').disabled = true;
+        renderChildrenSelector();
+        saveState();
+      }
+    }
+
+    function resetCurrentChronos() {
+      resetRunningTimersOnly();
+      selectedChildIndexes = [];
+      document.getElementById('duoInfo').textContent = children.length ? 'Sélectionne les enfants à chronométrer.' : 'Charge d’abord la liste des enfants.';
+      document.getElementById('startBtn').disabled = true;
+      renderChildrenSelector();
+      renderChronoChildren();
+      saveState();
+    }
+
+    function resetRunningTimersOnly() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      chronoRunning = false;
+      activeChildrenState = [];
+    }
+
+    function resetChildChrono(index) {
+      if (chronoRunning) {
+        alert('Arrête ou réinitialise d’abord les chronos en cours.');
+        return;
+      }
+      children[index].time = null;
+      selectedChildIndexes = selectedChildIndexes.filter(childIndex => childIndex !== index);
+      document.getElementById('groupsSection').classList.add('hidden');
+      renderAll();
+      saveState();
+    }
+
+    function resetAllSavedChronos() {
+      if (!confirm('Réinitialiser tous les chronos sauvegardés ?')) return;
+      resetRunningTimersOnly();
+      selectedChildIndexes = [];
+      children.forEach(child => child.time = null);
+      document.getElementById('groupsSection').classList.add('hidden');
+      renderAll();
+      saveState();
+    }
+
+    function getSortedChildrenForResults() {
+      return [...children].sort((a, b) => {
+        if (a.time === null && b.time === null) return a.name.localeCompare(b.name);
+        if (a.time === null) return 1;
+        if (b.time === null) return -1;
+        return a.time - b.time;
+      });
+    }
+
+    function renderResults() {
+      const body = document.getElementById('resultsBody');
+      if (!children.length) {
+        body.innerHTML = '<tr><td colspan="2">Aucun enfant chargé.</td></tr>';
+        return;
+      }
+      body.innerHTML = getSortedChildrenForResults().map(child => `
+        <tr>
+          <td>${escapeHtml(child.name)}</td>
+          <td>${child.time === null ? '-' : formatTime(child.time)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderHistory() {
+      const body = document.getElementById('historyBody');
+      const timedChildren = children
+        .map((child, index) => ({ ...child, index }))
+        .filter(child => child.time !== null)
+        .sort((a, b) => a.time - b.time);
+
+      if (!timedChildren.length) {
+        body.innerHTML = '<tr><td colspan="3">Aucun chrono sauvegardé.</td></tr>';
+        return;
+      }
+
+      body.innerHTML = timedChildren.map(child => `
+        <tr>
+          <td>${escapeHtml(child.name)}</td>
+          <td>${formatTime(child.time)}</td>
+          <td><button class="danger" onclick="resetChildChrono(${child.index})">Reset</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function createBalancedGroups() {
+      const timedChildren = children.filter(child => child.time !== null);
+      if (timedChildren.length < 2) {
+        alert('Il faut chronométrer au moins deux enfants.');
+        return;
+      }
+
+      const sorted = [...timedChildren].sort((a, b) => b.time - a.time);
+      const groupA = [];
+      const groupB = [];
+      let totalA = 0;
+      let totalB = 0;
+
+      sorted.forEach(child => {
+        if (totalA <= totalB) {
+          groupA.push(child);
+          totalA += child.time;
+        } else {
+          groupB.push(child);
+          totalB += child.time;
+        }
+      });
+
+      renderGroup('groupA', 'groupASummary', groupA, totalA);
+      renderGroup('groupB', 'groupBSummary', groupB, totalB);
+      document.getElementById('groupsSection').classList.remove('hidden');
+    }
+
+    function renderGroup(bodyId, summaryId, group, total) {
+      const body = document.getElementById(bodyId);
+      const average = group.length ? total / group.length : 0;
+      document.getElementById(summaryId).textContent = `${group.length} enfant(s), moyenne: ${formatTime(average)}, total: ${formatTime(total)}`;
+      body.innerHTML = group
+        .sort((a, b) => a.time - b.time)
+        .map(child => `<tr><td>${escapeHtml(child.name)}</td><td>${formatTime(child.time)}</td></tr>`)
+        .join('');
+    }
+
+    function exportCsv() {
+      const rows = [['Enfant', 'Temps']];
+      getSortedChildrenForResults().forEach(child => rows.push([child.name, child.time === null ? '' : formatTime(child.time)]));
+      const csv = rows.map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(';')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'chronometrage-enfants.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function formatTime(ms) {
+      const minutes = Math.floor(ms / 60000);
+      const seconds = Math.floor((ms % 60000) / 1000);
+      const centiseconds = Math.floor((ms % 1000) / 10);
+      return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(centiseconds).padStart(2, '0')}`;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function resetAll() {
+      if (!confirm('Tout effacer ?')) return;
+      localStorage.removeItem('chronoChildrenState');
+      location.reload();
+    }
+
+    function saveState() {
+      localStorage.setItem('chronoChildrenState', JSON.stringify({ children, selectedChildIndexes }));
+    }
+
+    function restoreState() {
+      const raw = localStorage.getItem('chronoChildrenState');
+      if (!raw) {
+        loadDefaultChildren();
+        renderAll();
+        return;
+      }
+      try {
+        const state = JSON.parse(raw);
+        children = state.children || [];
+        selectedChildIndexes = state.selectedChildIndexes || [];
+        if (children.length) {
+          document.getElementById('childrenInput').value = children.map(c => c.name).join('\n');
+        } else {
+          loadDefaultChildren();
+        }
+        renderAll();
+      } catch (e) {
+        localStorage.removeItem('chronoChildrenState');
+        loadDefaultChildren();
+        renderAll();
+      }
+    }
+
+    restoreState();
+  </script>
+</body>
+</html>
+

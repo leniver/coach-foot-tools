@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Exercices d'entraînement</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Styles spécifiques aux exercices */
+    .cat-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--surface);
+      padding: 8px 0 12px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    .cat-link {
+      background: var(--border);
+      border-radius: 999px;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: bold;
+      padding: 8px 14px;
+      text-decoration: none;
+    }
+    .cat-title {
+      scroll-margin-top: 70px;
+      margin: 22px 0 10px 0;
+    }
+    .exo-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .exo-head {
+      align-items: baseline;
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+    }
+    .exo-title { font-size: 18px; font-weight: bold; }
+    .duree {
+      background: var(--primary-soft);
+      border-radius: 999px;
+      color: var(--primary);
+      flex: 0 0 auto;
+      font-size: 13px;
+      font-weight: bold;
+      padding: 4px 10px;
+      white-space: nowrap;
+    }
+    .exo-desc { margin: 8px 0 0 0; }
+
+    @media (min-width: 850px) {
+      .exo-list { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Exercices d'entraînement</h1>
+    <p class="muted">
+      <a href="index.html">← Outils</a> · Exercices classés par catégorie.
+    </p>
+    <nav class="cat-nav" id="catNav"></nav>
+    <div id="exoSections"></div>
+  </main>
+
+  <script>
+    // Pour ajouter un exercice, ajoute une entrée ici.
+    // L'ordre des catégories suit leur première apparition.
+    const exercices = [
+      {
+        categorie: 'Échauffement',
+        titre: 'Toro (rondo)',
+        duree: '10 min',
+        description: 'Cercle de joueurs, 1 ou 2 au milieu. Conserver le ballon en une ou deux touches. Celui qui perd le ballon va au centre.'
+      },
+      {
+        categorie: 'Échauffement',
+        titre: 'Course et mobilité',
+        duree: '8 min',
+        description: 'Course légère autour du terrain avec montées de genoux, talons-fesses, pas chassés et accélérations courtes.'
+      },
+      {
+        categorie: 'Conduite de balle',
+        titre: 'Slalom entre les plots',
+        duree: '12 min',
+        description: 'Ligne de plots espacés de 1,5 m. Conduire le ballon en slalom des deux pieds, puis sprint final jusqu’à la ligne.'
+      },
+      {
+        categorie: 'Conduite de balle',
+        titre: 'Carré de dribble',
+        duree: '10 min',
+        description: 'Chaque joueur avec un ballon dans un carré. Conduire sans se toucher, changer de direction au signal, utiliser semelle et extérieur du pied.'
+      },
+      {
+        categorie: 'Passes',
+        titre: 'Passes en triangle',
+        duree: '12 min',
+        description: 'Trois joueurs en triangle. Passe et suit son ballon. Travailler la passe intérieure du pied et le contrôle orienté.'
+      },
+      {
+        categorie: 'Passes',
+        titre: 'Passe et va',
+        duree: '10 min',
+        description: 'Deux joueurs face à face. Passe, appel, remise en une touche. Augmenter progressivement la distance et le rythme.'
+      },
+      {
+        categorie: 'Tir / Finition',
+        titre: 'Tir après conduite',
+        duree: '15 min',
+        description: 'Conduire vers la surface, fixer un plot puis frapper au but. Alterner pied droit et pied gauche, viser les coins.'
+      },
+      {
+        categorie: 'Tir / Finition',
+        titre: 'Une-deux et frappe',
+        duree: '12 min',
+        description: 'Passe à un appui, remise, puis frappe de première intention. Insister sur la précision avant la puissance.'
+      },
+      {
+        categorie: 'Jeu',
+        titre: 'Match à effectif réduit',
+        duree: '15 min',
+        description: 'Jeu 4 contre 4 sur petit terrain avec petits buts. Encourager le jeu en mouvement et les passes rapides.'
+      },
+      {
+        categorie: 'Jeu',
+        titre: 'Conservation 5 contre 2',
+        duree: '12 min',
+        description: 'Cinq joueurs conservent le ballon contre deux défenseurs dans une zone. Compter les passes consécutives, changer les défenseurs.'
+      }
+    ];
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function slug(text) {
+      return 'cat-' + text.toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+    }
+
+    // Regroupe les exercices par catégorie en gardant l'ordre d'apparition.
+    const categories = [];
+    const byCategory = new Map();
+    exercices.forEach(exo => {
+      if (!byCategory.has(exo.categorie)) {
+        byCategory.set(exo.categorie, []);
+        categories.push(exo.categorie);
+      }
+      byCategory.get(exo.categorie).push(exo);
+    });
+
+    document.getElementById('catNav').innerHTML = categories.map(cat =>
+      `<a class="cat-link" href="#${slug(cat)}">${escapeHtml(cat)}</a>`
+    ).join('');
+
+    document.getElementById('exoSections').innerHTML = categories.map(cat => `
+      <section>
+        <h2 class="cat-title" id="${slug(cat)}">${escapeHtml(cat)}</h2>
+        <div class="exo-list">
+          ${byCategory.get(cat).map(exo => `
+            <div class="card">
+              <div class="exo-head">
+                <span class="exo-title">${escapeHtml(exo.titre)}</span>
+                <span class="duree">${escapeHtml(exo.duree)}</span>
+              </div>
+              <p class="exo-desc">${escapeHtml(exo.description)}</p>
+            </div>
+          `).join('')}
+        </div>
+      </section>
+    `).join('');
+  </script>
+</body>
+</html>

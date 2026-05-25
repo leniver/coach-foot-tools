@@ -1,0 +1,116 @@
+/* Système de design partagé par tous les outils.
+   Les styles spécifiques à un outil restent dans le <style> de sa page. */
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --text: #1f2937;
+  --muted: #64748b;
+  --border: #e5e7eb;
+  --border-strong: #cbd5e1;
+  --primary: #2563eb;
+  --primary-soft: #dbeafe;
+  --secondary: #64748b;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --radius-card: 14px;
+  --radius-control: 12px;
+  --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  touch-action: manipulation;
+}
+
+main {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  background: var(--surface);
+  min-height: 100vh;
+  padding: 14px;
+}
+
+h1 { font-size: 24px; margin: 0 0 8px 0; }
+h2 { font-size: 20px; margin-top: 0; }
+h3 { margin-bottom: 6px; }
+
+textarea, input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  font-size: 16px;
+}
+textarea { min-height: 180px; resize: vertical; }
+
+button {
+  background: var(--primary);
+  border: 0;
+  border-radius: var(--radius-control);
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  margin: 5px 4px 5px 0;
+  min-height: 52px;
+  padding: 14px 16px;
+}
+button.full { width: 100%; }
+button.secondary { background: var(--secondary); }
+button.success { background: var(--success); }
+button.warning { background: var(--warning); }
+button.danger { background: var(--danger); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 14px;
+}
+
+.muted { color: var(--muted); font-size: 14px; }
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 15px;
+}
+th, td {
+  border-bottom: 1px solid var(--border);
+  padding: 10px 6px;
+  text-align: left;
+}
+th { background: var(--surface-soft); }
+
+.hidden { display: none; }
+
+@media (min-width: 850px) {
+  main {
+    margin: 20px auto;
+    min-height: auto;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  .actions { display: block; }
+  button.full { width: auto; }
+}
