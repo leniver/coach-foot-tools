@@ -11,11 +11,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: var(--surface);
-      padding: 8px 0 12px 0;
+      padding: 0 0 12px 0;
       border-bottom: 1px solid var(--border);
       margin-bottom: 14px;
     }
@@ -131,8 +127,8 @@
       padding: 6px 10px;
     }
     .session-total { font-weight: bold; margin: 12px 0 0 0; }
+    .session-pause { font-size: 13px; margin: 0 0 8px 0; padding-left: 4px; }
     .exo-add { width: 100%; margin-top: 10px; }
-    .catalogue-title { margin-top: 24px; }
 
     @media (min-width: 850px) {
       .exo-list { grid-template-columns: 1fr 1fr; }
@@ -144,19 +140,31 @@
     <a href="index.html" class="page-close" title="Retour à l'accueil" aria-label="Fermer">✕</a>
     <h1>Exercices d'entraînement</h1>
 
-    <div class="card">
-      <h2>Ma séance</h2>
-      <div class="players-row">
-        <label for="playerCount">Nombre de joueurs</label>
-        <input type="number" id="playerCount" min="1" inputmode="numeric" oninput="setPlayers(this.value)" />
-      </div>
-      <div id="sessionList"></div>
-      <p class="session-total" id="sessionTotal"></p>
-    </div>
+    <nav class="tabs">
+      <button class="tab-button active" id="tabExercicesBtn" onclick="showTab('exercices')">Exercices</button>
+      <button class="tab-button" id="tabSelectionBtn" onclick="showTab('selection')">Sélectionnés</button>
+    </nav>
 
-    <h2 class="catalogue-title">Catalogue d'exercices</h2>
-    <nav class="cat-nav" id="catNav"></nav>
-    <div id="exoSections"></div>
+    <section class="tab-panel active" id="tabExercices">
+      <nav class="cat-nav" id="catNav"></nav>
+      <div id="exoSections"></div>
+    </section>
+
+    <section class="tab-panel" id="tabSelection">
+      <div class="card">
+        <h2>Sélectionnés</h2>
+        <div class="players-row">
+          <label for="playerCount">Nombre de joueurs</label>
+          <input type="number" id="playerCount" min="1" inputmode="numeric" oninput="setPlayers(this.value)" />
+        </div>
+        <div class="players-row">
+          <label for="pauseInput">Pause entre exercices (min)</label>
+          <input type="number" id="pauseInput" min="0" inputmode="numeric" oninput="setPause(this.value)" />
+        </div>
+        <div id="sessionList"></div>
+        <p class="session-total" id="sessionTotal"></p>
+      </div>
+    </section>
   </main>
 
   <div class="lightbox" id="lightbox" onclick="closeLightbox()">
@@ -170,7 +178,7 @@
     // "minutes" sert à l'estimation de temps ; "perPlayer: true" = minutes par joueur.
     const exercices = [
       {
-        categorie: 'Échauffement',
+        categorie: 'Passes',
         titre: 'La mouche',
         duree: '5-10 min',
         minutes: 10,
@@ -178,7 +186,7 @@
         image: 'images/la-mouche.png'
       },
       {
-        categorie: 'Échauffement',
+        categorie: 'Passes',
         titre: 'La machine à laver',
         duree: '2 x 5 min',
         minutes: 10,
@@ -188,7 +196,7 @@
       {
         categorie: 'Conduite de balle',
         titre: 'Slalom 1',
-        duree: '1 min / enfant',
+        duree: '1 min / joueur',
         minutes: 1,
         perPlayer: true,
         description: 'Sprint pour récupérer le ballon, slalom autour des 3 cônes, retour en conduite pour déposer le ballon dans le cerceau, puis sprint final jusqu’à la ligne d’arrivée.',
@@ -201,6 +209,23 @@
         minutes: 5,
         description: 'Chaque joueur a un ballon dans un carré délimité. Conduire librement sans sortir ni se toucher, en variant les surfaces : semelle, intérieur et extérieur du pied.',
         image: 'images/carre-de-dribble.png'
+      },
+      {
+        categorie: 'Dribble',
+        titre: 'Un contre un',
+        duree: '1 min / joueur',
+        minutes: 1,
+        perPlayer: true,
+        description: 'Un joueur est défenseur, les autres viennent un par un. L’attaquant dribble pour éliminer le défenseur puis tire entre le piquet et le poteau du côté de son choix (gauche ou droite). Il devient ensuite défenseur.',
+        image: 'images/1-contre-1.png'
+      },
+      {
+        categorie: 'Passes',
+        titre: 'Le sourire',
+        duree: '5 min (2 joueurs)',
+        minutes: 5,
+        description: 'À deux, autour de 3 cônes disposés en V : un joueur fait des allers-retours en forme de sourire pendant que l’autre lui passe le ballon d’un côté puis de l’autre. Le coureur contrôle, revient au cône central et repart de l’autre côté. On échange les rôles régulièrement.',
+        image: 'images/le-sourire.png'
       }
     ];
 
@@ -227,6 +252,15 @@
     const SESSION_KEY = 'exercicesSession';
     let session = [];   // titres des exercices, dans l'ordre de la séance
     let players = 12;
+    let pause = 2;      // minutes de pause entre chaque exercice
+
+    function showTab(name) {
+      document.getElementById('tabExercices').classList.toggle('active', name === 'exercices');
+      document.getElementById('tabSelection').classList.toggle('active', name === 'selection');
+      document.getElementById('tabExercicesBtn').classList.toggle('active', name === 'exercices');
+      document.getElementById('tabSelectionBtn').classList.toggle('active', name === 'selection');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     function renderNav() {
       document.getElementById('catNav').innerHTML = filters.map((cat, index) => {
@@ -245,7 +279,7 @@
           <h2 class="cat-title">${escapeHtml(cat)}</h2>
           <div class="exo-list">
             ${byCategory.get(cat).map(exo => {
-              const inSession = session.includes(exo.titre);
+              const count = session.filter(titre => titre === exo.titre).length;
               const gi = exercices.indexOf(exo);
               return `
               <div class="card">
@@ -258,7 +292,7 @@
                   <button class="link-btn" onclick="toggleImage(this)">Voir plus</button>
                   <img class="exo-image hidden" src="${encodeURI(exo.image)}" alt="${escapeHtml(exo.titre)}" loading="lazy" onclick="openLightbox(this.src, this.alt)" />
                 ` : ''}
-                <button class="exo-add ${inSession ? 'secondary' : 'success'}" onclick="toggleSession(${gi})">${inSession ? 'Retirer de la séance' : 'Ajouter à la séance'}</button>
+                <button class="exo-add success" onclick="addToSession(${gi})">Ajouter à la séance${count ? ` (${count}×)` : ''}</button>
               </div>`;
             }).join('')}
           </div>
@@ -314,12 +348,10 @@
       return mins ? `${hours} h ${String(mins).padStart(2, '0')}` : `${hours} h`;
     }
 
-    function toggleSession(index) {
+    function addToSession(index) {
       const exo = exercices[index];
       if (!exo) return;
-      const pos = session.indexOf(exo.titre);
-      if (pos === -1) session.push(exo.titre);
-      else session.splice(pos, 1);
+      session.push(exo.titre);
       persistSession();
       renderSections();
       renderSession();
@@ -347,19 +379,31 @@
       renderSession();
     }
 
+    function setPause(value) {
+      const n = parseInt(value, 10);
+      pause = Number.isFinite(n) && n >= 0 ? n : 0;
+      persistSession();
+      renderSession();
+    }
+
     function renderSession() {
       const list = document.getElementById('sessionList');
       const totalEl = document.getElementById('sessionTotal');
+      document.getElementById('tabSelectionBtn').textContent =
+        session.length ? `Sélectionnés (${session.length})` : 'Sélectionnés';
+
       if (!session.length) {
-        list.innerHTML = '<p class="muted">Aucun exercice sélectionné. Ajoute des exercices depuis le catalogue.</p>';
+        list.innerHTML = '<p class="muted">Aucun exercice sélectionné. Ajoute des exercices depuis l’onglet « Exercices ».</p>';
         totalEl.textContent = '';
         return;
       }
-      list.innerHTML = session.map((titre, pos) => {
+
+      const rows = [];
+      session.forEach((titre, pos) => {
         const exo = findExo(titre);
-        if (!exo) return '';
+        if (!exo) return;
         const detail = exo.perPlayer ? ` (${exo.minutes} min × ${players} joueurs)` : '';
-        return `
+        rows.push(`
           <div class="session-item">
             <div>
               <div class="session-item-title">${pos + 1}. ${escapeHtml(exo.titre)}</div>
@@ -371,17 +415,23 @@
               <button class="danger" onclick="removeFromSession(${pos})" aria-label="Retirer">✕</button>
             </div>
           </div>
-        `;
-      }).join('');
-      const total = session.reduce((sum, titre) => {
+        `);
+        if (pause > 0 && pos < session.length - 1) {
+          rows.push(`<div class="session-pause muted">⏸ Pause ${pause} min</div>`);
+        }
+      });
+      list.innerHTML = rows.join('');
+
+      const exoTotal = session.reduce((sum, titre) => {
         const exo = findExo(titre);
         return sum + (exo ? exoMinutes(exo) : 0);
       }, 0);
-      totalEl.textContent = `Temps total estimé : ${formatMinutes(total)}`;
+      const pauseTotal = Math.max(0, session.length - 1) * pause;
+      totalEl.textContent = `Temps total estimé : ${formatMinutes(exoTotal + pauseTotal)}`;
     }
 
     function persistSession() {
-      localStorage.setItem(SESSION_KEY, JSON.stringify({ players, session }));
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ players, pause, session }));
     }
 
     function restoreSession() {
@@ -389,6 +439,7 @@
         const data = JSON.parse(localStorage.getItem(SESSION_KEY));
         if (!data) return;
         if (Number(data.players) > 0) players = Number(data.players);
+        if (Number.isFinite(Number(data.pause)) && Number(data.pause) >= 0) pause = Number(data.pause);
         if (Array.isArray(data.session)) session = data.session.filter(titre => findExo(titre));
       } catch (e) {
         // ignore
@@ -397,6 +448,7 @@
 
     restoreSession();
     document.getElementById('playerCount').value = players;
+    document.getElementById('pauseInput').value = pause;
     renderNav();
     renderSections();
     renderSession();

@@ -3,33 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Chronométrage enfants</title>
+  <title>Chronométrage joueurs</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
     /* Styles spécifiques au chronométrage */
-    .tabs {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 6px;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: var(--surface);
-      padding: 8px 0 12px 0;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 14px;
-    }
-    .tab-button {
-      background: var(--border);
-      color: var(--text);
-      font-size: 14px;
-      padding: 10px 6px;
-      min-height: 48px;
-      margin: 0;
-    }
-    .tab-button.active { background: var(--primary); color: white; }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
     .grid, .groups {
       display: grid;
       grid-template-columns: 1fr;
@@ -143,25 +120,24 @@
         grid-template-columns: 1.2fr 1fr 140px;
         align-items: center;
       }
-      .tab-button { font-size: 16px; }
     }
   </style>
 </head>
 <body>
   <main>
     <a href="index.html" class="page-close" title="Retour à l'accueil" aria-label="Fermer">✕</a>
-    <h1>Chronométrage enfants</h1>
-    <p class="muted">Sélectionne les enfants à chronométrer, lance les chronos, puis arrête chaque enfant séparément.</p>
+    <h1>Chronométrage joueurs</h1>
+    <p class="muted">Sélectionne les joueurs à chronométrer, lance les chronos, puis arrête chaque joueur séparément.</p>
 
     <nav class="tabs">
-      <button class="tab-button active" id="tabChildrenBtn" onclick="showTab('children')">Enfants</button>
+      <button class="tab-button active" id="tabChildrenBtn" onclick="showTab('children')">Joueurs</button>
       <button class="tab-button" id="tabChronoBtn" onclick="showTab('chrono')">Chrono</button>
       <button class="tab-button" id="tabResultsBtn" onclick="showTab('results')">Résultats</button>
     </nav>
 
     <section class="tab-panel active" id="tabChildren">
       <div class="card">
-        <h2>Listes d'enfants</h2>
+        <h2>Listes de joueurs</h2>
         <div class="saved-lists" id="savedLists"></div>
         <div class="actions">
           <button class="full" onclick="openListEditor()">Créer une nouvelle liste</button>
@@ -183,14 +159,14 @@
     <section class="tab-panel" id="tabChrono">
       <div class="grid">
         <div class="card">
-          <h2 id="selectorTitle">Choisir les enfants</h2>
-          <p class="muted" id="selectorHint">Tape sur tous les enfants à chronométrer.</p>
+          <h2 id="selectorTitle">Choisir les joueurs</h2>
+          <p class="muted" id="selectorHint">Tape sur tous les joueurs à chronométrer.</p>
           <div class="selector-list" id="childrenSelector"></div>
         </div>
 
         <div class="card">
           <h2>Chronométrage</h2>
-          <p id="duoInfo" class="muted">Charge d’abord la liste des enfants.</p>
+          <p id="duoInfo" class="muted">Charge d’abord la liste des joueurs.</p>
           <div class="chrono-list" id="currentDuo"></div>
           <div class="actions">
             <button class="success full" id="startBtn" onclick="startSelectedTimers()" disabled>Démarrer les chronos</button>
@@ -206,7 +182,7 @@
     <section class="tab-panel" id="tabResults">
       <div class="card">
         <h2>Résultats par session</h2>
-        <p class="muted">Chaque session correspond à un appui sur « Passer aux résultats ». Les enfants sont triés du plus rapide au plus lent.</p>
+        <p class="muted">Chaque session correspond à un appui sur « Passer aux résultats ». Les joueurs sont triés du plus rapide au plus lent.</p>
       </div>
 
       <div id="sessionsContainer"></div>
@@ -256,7 +232,7 @@
       selectedChildIndexes = [];
       resetRunningTimersOnly();
 
-      document.getElementById('duoInfo').textContent = 'Sélectionne les enfants à chronométrer.';
+      document.getElementById('duoInfo').textContent = 'Sélectionne les joueurs à chronométrer.';
       document.getElementById('startBtn').disabled = true;
 
       renderAll();
@@ -273,11 +249,11 @@
     function renderChildrenSelector() {
       updateResultsButton();
       const groupMode = isGroupMode();
-      document.getElementById('selectorTitle').textContent = groupMode ? 'Choisir les groupes' : 'Choisir les enfants';
-      document.getElementById('selectorHint').textContent = groupMode ? 'Tape sur tous les groupes à chronométrer.' : 'Tape sur tous les enfants à chronométrer.';
+      document.getElementById('selectorTitle').textContent = groupMode ? 'Choisir les groupes' : 'Choisir les joueurs';
+      document.getElementById('selectorHint').textContent = groupMode ? 'Tape sur tous les groupes à chronométrer.' : 'Tape sur tous les joueurs à chronométrer.';
       const container = document.getElementById('childrenSelector');
       if (!children.length) {
-        container.innerHTML = '<p class="muted">Aucun enfant chargé.</p>';
+        container.innerHTML = '<p class="muted">Aucun joueur chargé.</p>';
         updateSelectionSummary();
         return;
       }
@@ -357,19 +333,19 @@
 
       if (!children.length) {
         container.innerHTML = '';
-        document.getElementById('duoInfo').textContent = 'Charge d’abord la liste des enfants.';
+        document.getElementById('duoInfo').textContent = 'Charge d’abord la liste des joueurs.';
         document.getElementById('startBtn').disabled = true;
         return;
       }
 
       if (!selectedChildIndexes.length) {
         container.innerHTML = '';
-        document.getElementById('duoInfo').textContent = isGroupMode() ? 'Sélectionne les groupes à chronométrer.' : 'Sélectionne les enfants à chronométrer.';
+        document.getElementById('duoInfo').textContent = isGroupMode() ? 'Sélectionne les groupes à chronométrer.' : 'Sélectionne les joueurs à chronométrer.';
         document.getElementById('startBtn').disabled = true;
         return;
       }
 
-      document.getElementById('duoInfo').textContent = `${selectedChildIndexes.length} ${isGroupMode() ? 'groupe(s) sélectionné(s)' : 'enfant(s) sélectionné(s)'}`;
+      document.getElementById('duoInfo').textContent = `${selectedChildIndexes.length} ${isGroupMode() ? 'groupe(s) sélectionné(s)' : 'joueur(s) sélectionné(s)'}`;
       container.innerHTML = activeChildrenState.map(item => {
         const child = children[item.childIndex];
         const members = child.members && child.members.length
@@ -444,7 +420,7 @@
         selectedChildIndexes = [];
         activeChildrenState = [];
         document.getElementById('currentDuo').innerHTML = '';
-        document.getElementById('duoInfo').textContent = `Chronométrage terminé. Sélectionne ${isGroupMode() ? 'd’autres groupes' : 'd’autres enfants'} ou passe aux résultats.`;
+        document.getElementById('duoInfo').textContent = `Chronométrage terminé. Sélectionne ${isGroupMode() ? 'd’autres groupes' : 'd’autres joueurs'} ou passe aux résultats.`;
         document.getElementById('startBtn').disabled = true;
         renderChildrenSelector();
         saveState();
@@ -481,7 +457,7 @@
 
     function goToResults() {
       const now = Date.now();
-      // Capturer le temps actuel des enfants encore en cours.
+      // Capturer le temps actuel des joueurs encore en cours.
       activeChildrenState.forEach(item => {
         if (item.running && !item.stopped) {
           children[item.childIndex].time = now - startTime;
@@ -501,7 +477,7 @@
       selectedChildIndexes = [];
       children.forEach(child => child.time = null);
       document.getElementById('currentDuo').innerHTML = '';
-      document.getElementById('duoInfo').textContent = children.length ? 'Sélectionne les enfants à chronométrer.' : 'Charge d’abord la liste des enfants.';
+      document.getElementById('duoInfo').textContent = children.length ? 'Sélectionne les joueurs à chronométrer.' : 'Charge d’abord la liste des joueurs.';
       document.getElementById('startBtn').disabled = true;
 
       renderAll();
@@ -513,7 +489,7 @@
       const container = document.getElementById('sessionsContainer');
       if (!container) return;
       if (!sessions.length) {
-        container.innerHTML = '<div class="card"><p class="muted">Aucune session. Chronométre des enfants puis clique sur « Passer aux résultats ».</p></div>';
+        container.innerHTML = '<div class="card"><p class="muted">Aucune session. Chronométre des joueurs puis clique sur « Passer aux résultats ».</p></div>';
         return;
       }
       container.innerHTML = sessions.map((session, index) => {
@@ -526,10 +502,10 @@
           <div class="card">
             <div class="session-head">
               <h3>Session ${number}</h3>
-              <span class="muted">${formatDate(session.date)} · ${session.results.length} enfant(s)</span>
+              <span class="muted">${formatDate(session.date)} · ${session.results.length} joueur(s)</span>
             </div>
             <table>
-              <thead><tr><th>#</th><th>Enfant</th><th>Temps</th></tr></thead>
+              <thead><tr><th>#</th><th>Joueur</th><th>Temps</th></tr></thead>
               <tbody>${rows}</tbody>
             </table>
             <div class="actions">
@@ -569,7 +545,7 @@
       return `
         <div class="card ${cls}">
           <h3>${title}</h3>
-          <p class="muted">${group.length} enfant(s), moyenne: ${formatTime(average)}, total: ${formatTime(total)}</p>
+          <p class="muted">${group.length} joueur(s), moyenne: ${formatTime(average)}, total: ${formatTime(total)}</p>
           <table><tbody>${rows}</tbody></table>
         </div>
       `;
@@ -586,7 +562,7 @@
       const session = sessions.find(item => item.id === sessionId);
       if (!session) return;
       if (session.results.length < 2) {
-        alert('Il faut au moins deux enfants pour faire des groupes.');
+        alert('Il faut au moins deux joueurs pour faire des groupes.');
         return;
       }
       const { groupA, groupB, totalA, totalB } = balanceGroups(session.results);
@@ -613,7 +589,7 @@
       ];
       selectedChildIndexes = children.map((_, index) => index);
       resetRunningTimersOnly();
-      document.getElementById('duoInfo').textContent = 'Sélectionne les enfants à chronométrer.';
+      document.getElementById('duoInfo').textContent = 'Sélectionne les joueurs à chronométrer.';
       document.getElementById('startBtn').disabled = true;
       renderAll();
       saveState();
@@ -640,7 +616,7 @@
         alert('Aucun résultat à exporter.');
         return;
       }
-      const rows = [['Session', 'Date', 'Rang', 'Enfant', 'Temps']];
+      const rows = [['Session', 'Date', 'Rang', 'Joueur', 'Temps']];
       sessions.forEach((session, index) => {
         const number = sessions.length - index;
         [...session.results]
@@ -754,7 +730,7 @@
         .map(item => item.trim())
         .filter(Boolean);
       if (names.length < 2) {
-        alert('Ajoute au moins deux enfants.');
+        alert('Ajoute au moins deux joueurs.');
         return;
       }
       const lists = loadSavedLists();
@@ -783,7 +759,7 @@
         <div class="saved-list-row">
           <div>
             <div class="saved-list-name">${escapeHtml(name)}</div>
-            <div class="muted">${lists[name].length} enfant(s) : ${lists[name].map(escapeHtml).join(', ')}</div>
+            <div class="muted">${lists[name].length} joueur(s) : ${lists[name].map(escapeHtml).join(', ')}</div>
           </div>
           <div class="saved-list-actions">
             <button class="success" onclick="useNamedList(${index})">Charger</button>
