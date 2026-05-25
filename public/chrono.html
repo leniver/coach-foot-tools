@@ -20,7 +20,7 @@
     }
     .selector-list {
       display: grid;
-      grid-template-columns: 1fr;
+      grid-template-columns: 1fr 1fr;
       gap: 8px;
       margin-top: 10px;
     }
@@ -31,7 +31,9 @@
       color: var(--text);
       border: 2px solid var(--border);
       border-radius: var(--radius-control);
-      min-height: 58px;
+      min-height: 50px;
+      font-size: 15px;
+      padding: 10px 12px;
     }
     .select-child.selected { background: var(--primary-soft); border-color: var(--primary); }
     .select-child.done { background: #f0fdf4; border-color: var(--success); color: #166534; }
